@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auction</title>
+  </head>
+  <body>
+    <h1>Auction</h1>
+    <h3 id="price">Current price: 0</h3>
+    <h3 id="timer">Waiting for first bidder...</h3>
+
+    <div class="bid">
+      <p id="error" style="color: red;"></p>
+      <input type="number" id="bid" placeholder="Enter your bid" />
+      <button id="submitBtn">Submit bid</button>
+    </div>
+    <script>
+      const priceText = document.getElementById("price");
+      const submitBtn = document.getElementById("submitBtn");
+      const bidInput = document.getElementById("bid");
+      const errorText = document.getElementById("error")
+      const timerText = document.getElementById("timer");
+
+      const eventSource = new EventSource("http://localhost:3000/events");
+      eventSource.onmessage = (e) => {
+        let data = JSON.parse(e.data);
+        if (data.type === "price") {
+          priceText.textContent = `Current price: ${data.value}`;
+        } else if (data.type === "timer"){
+          if (data.value > 0){
+            timerText.textContent = `Sold in ${data.value} seconds...`
+          } else {
+            timerText.textContent = `SOLD!!` 
+          }
+        }
+      };
+
+      submitBtn.addEventListener("click", async (e) => {
+        const bid = bidInput.value;
+        if (!bid) {
+          return;
+        }
+        try {
+          let response = await fetch("http://localhost:3000/bid", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              price: bid,
+            }),
+          });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error)
+          }
+          response = await response.json();
+          console.log("Response", response);
+        } catch (error) {
+          errorText.textContent = error
+        }
+      });
+    </script>
+  </body>
+</html>
